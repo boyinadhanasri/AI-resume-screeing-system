@@ -10,9 +10,10 @@ from utils import (
     generate_pdf_report
 )
 
-# -------------------------------
-# Page Config
-# -------------------------------
+# --------------------------------------------------
+# Page Configuration
+# --------------------------------------------------
+
 st.set_page_config(
     page_title="AI Resume Screening",
     page_icon="📄",
@@ -20,19 +21,32 @@ st.set_page_config(
 )
 
 st.title("🤖 AI Resume Screening & ATS System")
-st.markdown("### Upload a resume and compare it with a Job Description")
+
+st.markdown(
+    """
+Upload your resume and compare it with a Job Description.
+The system calculates the ATS score, identifies skills,
+shows missing skills and suggests improvements.
+"""
+)
+
 st.divider()
 
-# -------------------------------
+# --------------------------------------------------
 # Job Description
-# -------------------------------
-job = st.text_area("📋 Enter Job Description")
+# --------------------------------------------------
 
-# -------------------------------
+job = st.text_area(
+    "📋 Enter Job Description",
+    height=200
+)
+
+# --------------------------------------------------
 # Upload Resume
-# -------------------------------
+# --------------------------------------------------
+
 uploaded_file = st.file_uploader(
-    "📄 Upload Resume",
+    "📄 Upload Resume (PDF)",
     type=["pdf"]
 )
 
@@ -54,26 +68,32 @@ if uploaded_file:
 
     st.success("✅ Resume uploaded successfully!")
 
-# -------------------------------
+# --------------------------------------------------
 # Check Match
-# -------------------------------
+# --------------------------------------------------
+
 if st.button("🔍 Check Match"):
 
     if job.strip() == "":
-        st.warning("Please enter the Job Description.")
+        st.warning("Please enter Job Description.")
         st.stop()
 
     if resume_text.strip() == "":
-        st.warning("Please upload a Resume.")
+        st.warning("Please upload Resume.")
         st.stop()
 
-    # -------------------------------
+    # ------------------------------------------
     # Processing
-    # -------------------------------
+    # ------------------------------------------
 
-    score = calculate_match_score(job, resume_text)
+    score = calculate_match_score(
+        job,
+        resume_text
+    )
 
-    found_skills, skills = extract_skills(resume_text)
+    found_skills, skills = extract_skills(
+        resume_text
+    )
 
     missing_skills = extract_missing_skills(
         job,
@@ -90,115 +110,194 @@ if st.button("🔍 Check Match"):
         missing_skills
     )
 
-    # -------------------------------
-    # Dashboard
-    # -------------------------------
+    required_skills = 0
+
+    for skill in skills:
+
+        if skill.lower() in job.lower():
+            required_skills += 1
+
+    if required_skills == 0:
+
+        skill_match = 100
+
+    else:
+
+        skill_match = (
+            len(found_skills) /
+            required_skills
+        ) * 100
+
+    # --------------------------------------------------
+    # ATS Dashboard
+    # --------------------------------------------------
 
     st.divider()
 
     st.subheader("📊 ATS Dashboard")
 
-    c1, c2, c3 = st.columns(3)
+    col1, col2, col3 = st.columns(3)
 
-    c1.metric("🎯 ATS Score", f"{score:.2f}%")
-    c2.metric("🛠 Skills Found", len(found_skills))
-    c3.metric("❌ Missing Skills", len(missing_skills))
+    col1.metric(
+        "🎯 ATS Score",
+        f"{score:.2f}%"
+    )
 
-    st.progress(min(int(score), 100))
+    col2.metric(
+        "🛠 Skills Found",
+        len(found_skills)
+    )
 
-    # -------------------------------
+    col3.metric(
+        "❌ Missing Skills",
+        len(missing_skills)
+    )
+
+    st.progress(
+        min(int(score),100)
+    )
+
+    st.info(
+        f"""
+ATS Score : **{score:.2f}%**
+
+Skill Match : **{skill_match:.1f}%**
+
+The ATS score is calculated using:
+
+• Resume similarity
+
+• Skill matching
+
+• Keyword relevance
+"""
+    )
+    # --------------------------------------------------
     # Resume Rating
-    # -------------------------------
+    # --------------------------------------------------
 
     st.divider()
 
     st.subheader("⭐ Resume Rating")
 
-    if score >= 80:
-        st.success("Excellent Resume Match")
+    if score >= 90:
+        st.success("🌟 Excellent Resume Match")
+    elif score >= 75:
+        st.success("✅ Good Resume Match")
     elif score >= 60:
-        st.info("Good Resume Match")
-    elif score >= 40:
-        st.warning("Average Resume Match")
+        st.warning("👍 Average Resume Match")
     else:
-        st.error("Poor Resume Match")
+        st.error("❌ Needs Improvement")
 
-    # -------------------------------
+    # --------------------------------------------------
     # Skills Found
-    # -------------------------------
+    # --------------------------------------------------
 
     st.divider()
 
     st.subheader("🛠 Skills Found")
 
     if found_skills:
-        for skill in found_skills:
-            st.success("✅ " + skill)
-    else:
-        st.warning("No skills found.")
 
-    # -------------------------------
+        cols = st.columns(3)
+
+        for i, skill in enumerate(found_skills):
+            cols[i % 3].success(skill)
+
+    else:
+
+        st.warning("No skills detected.")
+
+    # --------------------------------------------------
     # Missing Skills
-    # -------------------------------
+    # --------------------------------------------------
 
     st.divider()
 
     st.subheader("❌ Missing Skills")
 
     if missing_skills:
-        for skill in missing_skills:
-            st.error("❌ " + skill)
-    else:
-        st.success("🎉 No Missing Skills")
 
-    # -------------------------------
+        cols = st.columns(3)
+
+        for i, skill in enumerate(missing_skills):
+            cols[i % 3].error(skill)
+
+    else:
+
+        st.success("🎉 No Missing Skills Found!")
+
+    # --------------------------------------------------
     # Candidate Details
-    # -------------------------------
+    # --------------------------------------------------
 
     st.divider()
 
     st.subheader("👤 Candidate Details")
 
-    st.write("### 👤 Name")
-    st.write(name)
+    c1, c2 = st.columns(2)
 
-    st.write("### 📧 Email")
-    st.write(emails[0] if emails else "Not Found")
+    with c1:
+        st.write("### 👤 Name")
+        st.success(name)
 
-    st.write("### 📱 Phone")
-    st.write(phones[0] if phones else "Not Found")
+        st.write("### 📧 Email")
+        st.info(emails[0] if emails else "Not Found")
 
-    # -------------------------------
-    # Suggestions
-    # -------------------------------
+    with c2:
+        st.write("### 📱 Phone")
+        st.info(phones[0] if phones else "Not Found")
+
+        st.write("### 📄 Resume Pages")
+        st.info(page_count)
+
+    # --------------------------------------------------
+    # Resume Suggestions
+    # --------------------------------------------------
 
     st.divider()
 
     st.subheader("💡 Resume Improvement Suggestions")
 
     if suggestions:
+
         for suggestion in suggestions:
             st.warning("💡 " + suggestion)
-    else:
-        st.success("Excellent! Your resume looks well prepared.")
 
-    # -------------------------------
-    # Statistics
-    # -------------------------------
+    else:
+
+        st.success(
+            "Excellent! Your resume is well optimized for ATS."
+        )
+
+    # --------------------------------------------------
+    # Resume Statistics
+    # --------------------------------------------------
 
     st.divider()
 
     st.subheader("📈 Resume Statistics")
 
-    c1, c2, c3 = st.columns(3)
+    col1, col2, col3 = st.columns(3)
 
-    c1.metric("Words", len(resume_text.split()))
-    c2.metric("Characters", len(resume_text))
-    c3.metric("Pages", page_count)
+    col1.metric(
+        "Total Words",
+        len(resume_text.split())
+    )
 
-    # -------------------------------
+    col2.metric(
+        "Characters",
+        len(resume_text)
+    )
+
+    col3.metric(
+        "Pages",
+        page_count
+    )
+
+    # --------------------------------------------------
     # Resume Preview
-    # -------------------------------
+    # --------------------------------------------------
 
     st.divider()
 
@@ -210,9 +309,9 @@ if st.button("🔍 Check Match"):
         height=300
     )
 
-    # -------------------------------
-    # Download PDF Report
-    # -------------------------------
+    # --------------------------------------------------
+    # PDF Report
+    # --------------------------------------------------
 
     st.divider()
 
@@ -234,3 +333,5 @@ if st.button("🔍 Check Match"):
         file_name="Resume_Screening_Report.pdf",
         mime="application/pdf"
     )
+
+    st.balloons()
